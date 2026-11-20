@@ -73,4 +73,18 @@ public class TestCheckerBaselineTest {
         assertEquals(new BoolType(), parseAndCheck("5 == 5"));
         assertEquals(new BoolType(), parseAndCheck("3 < 10"));
     }
+
+    @Test
+    @DisplayName("TC_BASE_05: Costrutto condizionale if then else ben tipato")
+    public void testTC_BASE_05_ValidIfThenElse() {
+        assertEquals(new IntType(), parseAndCheck("if 3 < 5 then 100 else 200"));
+        assertEquals(new BoolType(), parseAndCheck("if true then false else true"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_06: Dichiarazione locale let Expr e risoluzione var expr nello scope")
+    public void testTC_BASE_06_ValidLetBindingAndVarLookup() {
+        String code = "let x = 10 in let y = 20 in x + y";
+        assertEquals(new IntType(), parseAndCheck(code));
+    }
 }
