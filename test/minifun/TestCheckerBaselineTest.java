@@ -174,4 +174,21 @@ public class TestCheckerBaselineTest {
         TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("let f = fun x : int => x + 1 in f true"));
         assertTrue(e.getMessage().contains(errorMsg));
     }
+
+    @Test
+    @DisplayName("TC_BASE_17: Errore in let fun expr quando il tipo annotato non è una funzione")
+    public void testTC_BASE_17_InvalidLetFunAnnotatedTypeNotFunction() {
+        String code = "letfun f : int = fun x : int => x in f";
+        TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
+        assertTrue(ex.getMessage().contains("Type error: f is not a function"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_18: Errore in let fun expr quando il corpo non rispetta la firma annotata")
+    public void testTC_BASE_18_InvalidLetFunBodyTypeMismatch() {
+        String errorMsg = "Type error: the type of f does not correspond to the type of";
+        String code = "letfun f : (int -> bool) = fun x : int => x + 1 in f 5";                 //Dichiarata come (int -> bool) ma il corpo restituisce int (x + 1)
+        TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
+        assertTrue(ex.getMessage().contains(errorMsg));
+    }
 }
