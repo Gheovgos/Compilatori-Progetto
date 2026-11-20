@@ -117,4 +117,29 @@ public class TestCheckerBaselineTest {
                     + "in sumToZero 5";
         assertEquals(new IntType(), parseAndCheck(code));
     }
+
+    //Testing black box WECT (Classi non valide)
+    @Test
+    @DisplayName("TC_BASE_10: Errore per variabile non dichiarata nel contesto")
+    public void testTC_BASE_10_InvalidUndefinedVariable() {
+        String errorMsg = "Variable not defined: 'y' is not present in the context";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("y + 1"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_11: Errore in operazione binaria con operando sx non intero")
+    public void testTC_BASE_11_InvalidBinOpLeftOperandNotInt() {
+        String errorMsg = "Type error in the operation '+'. Expected (int, int), but got (bool, int).";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("true + 23"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_12: Errore in operazione binaria con operando dx non intero")
+    public void testTC_BASE_12_InvalidBinOpRightOperandNotInt() {
+        String errorMsg = "Type error in the operation '+'. Expected (int, int), but got (int, bool).";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("23 + false"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
 }
