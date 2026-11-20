@@ -82,9 +82,39 @@ public class TestCheckerBaselineTest {
     }
 
     @Test
-    @DisplayName("TC_BASE_06: Dichiarazione locale let Expr e risoluzione var expr nello scope")
+    @DisplayName("TC_BASE_06: Dichiarazione locale LetExpr e risoluzione VarExpr nello scope")
     public void testTC_BASE_06_ValidLetBindingAndVarLookup() {
         String code = "let x = 10 in let y = 20 in x + y";
+        assertEquals(new IntType(), parseAndCheck(code));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_07: Definizione di funzione anonima tipizzata FunExpr")
+    public void testTC_BASE_07_ValidAnonymousFunctionDefinition() {
+        Type expectedType = new FunType(new IntType(), new BoolType());
+        assertEquals(expectedType, parseAndCheck("fun x : int => x == 0"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_08: Applicazione di funzione (AppExpr) e funzioni di ordine superiore")
+    public void testTC_BASE_08_ValidFunctionApplicationAndHigherOrder() {
+
+        //Applicazione diretta
+        assertEquals(new IntType(), parseAndCheck("(fun x : int => x + 1) 5"));
+
+        //Currying: funzione che restituisce una funzione
+        String higherOrder = "let add = fun x : int => (fun y : int => x + y) in (add 3) 4";
+        assertEquals(new IntType(), parseAndCheck(higherOrder));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_09: Dichiarazione e applicazione di funzione ricorsiva LetFunExpr")
+    public void testTC_BASE_09_ValidRecursiveLetFun() {
+
+        //Funzione ricorsiva di esempio: calcola la somma di tutti i numeri interi da 0 a n
+        String code = "letfun sumToZero : (int -> int) ="
+                    + "fun n : int => if n == 0 then 0 else n + (sumToZero (n - 1)) "
+                    + "in sumToZero 5";
         assertEquals(new IntType(), parseAndCheck(code));
     }
 }
