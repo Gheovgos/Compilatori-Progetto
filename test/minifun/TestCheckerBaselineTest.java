@@ -191,4 +191,22 @@ public class TestCheckerBaselineTest {
         TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
         assertTrue(ex.getMessage().contains(errorMsg));
     }
+
+    //White-Box testing: structural coverage per rami non raggiungibili dal parser
+
+    @Test
+    @DisplayName("TC_BASE_19: Copertura ramo di default per operatore binario sconosciuto su AST")
+    public void testTC_BASE_19_WhiteBoxUnknownOperator() {
+        Expr invalidBinOp = new BinOpExpr("/", new IntExpr(10), new IntExpr(2));
+        TypeException e = assertThrows(TypeException.class, () -> typeChecker.check(invalidBinOp, typeEnvironment));
+        assertTrue(e.getMessage().contains("Unknown operator: /"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_20: Copertura ramo di default per nodo Expr non supportato dal type checker")
+    public void testTC_BASE_20_WhiteBoxUnsupportedExprNode() {
+        Expr invalidExpr = new Expr() {};
+        RuntimeException e = assertThrows(RuntimeException.class, () -> typeChecker.check(invalidExpr, typeEnvironment));
+        assertTrue(e.getMessage().contains("Node not supported by the TypeChecker"));
+    }
 }
