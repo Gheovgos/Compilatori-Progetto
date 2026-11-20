@@ -57,4 +57,20 @@ public class TestCheckerBaselineTest {
         assertEquals(new BoolType(), parseAndCheck("false"));
     }
 
+    @Test
+    @DisplayName("TC_BASE_03: Operatori binari aritmetici (+, -, *) su operandi interi")
+    public void testTC_BASE_03_ValidArithmeticOperations()
+    {
+        assertEquals(new IntType(), parseAndCheck("10 + 5"));
+        assertEquals(new IntType(), parseAndCheck("10 - 5"));
+        assertEquals(new IntType(), parseAndCheck("10 * 5"));
+        assertEquals(new IntType(), parseAndCheck("(2 + 3) * (10 - 4)"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_04: Operatori binari relazionali (==, <) su operandi interi")
+    public void testTC_BASE_04_ValidOperationalOperations() {
+        assertEquals(new BoolType(), parseAndCheck("5 == 5"));
+        assertEquals(new BoolType(), parseAndCheck("3 < 10"));
+    }
 }
