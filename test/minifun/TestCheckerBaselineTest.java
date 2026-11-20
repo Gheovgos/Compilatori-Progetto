@@ -48,5 +48,13 @@ public class TestCheckerBaselineTest {
         assertEquals(new IntType(), gamma1.lookup("x"));
     }
 
+    //Testing black box WECT (Casi positivi)
+    @Test
+    @DisplayName("TC_BASE_02: Tipi primitivi letterali (Interi e booleani True/False)")
+    public void testTC_BASE_02_ValidLiterals() {
+        assertEquals(new IntType(), parseAndCheck("32"));
+        assertEquals(new BoolType(), parseAndCheck("true"));
+        assertEquals(new BoolType(), parseAndCheck("false"));
+    }
 
 }
