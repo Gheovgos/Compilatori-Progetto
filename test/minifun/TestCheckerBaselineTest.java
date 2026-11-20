@@ -142,4 +142,36 @@ public class TestCheckerBaselineTest {
         TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("23 + false"));
         assertTrue(e.getMessage().contains(errorMsg));
     }
+
+    @Test
+    @DisplayName("TC_BASE_13: Errore in if per condizione non booleana")
+    public void testTC_BASE_13_InvalidConditionNotBool() {
+        String errorMsg = "Type error in the if condition: Expected bool but got int";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("if 10 + 2 then 1 else 0"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_14: Errore in if per then ed else con tipo differente")
+    public void testTC_BASE_14_InvalidIfBranchesTypeMismatch() {
+        String errorMsg = "Type error in branches: then and else branch must be of the same type but got then of type int and else of type bool";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("if true then 1 else false"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_15: Errore in AppExpr per applicazione di un termine che non è una funzione")
+    public void testTC_BASE_15_InvalidApplicationOfNonFunction() {
+        String errorMsg = "is not a function";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("let x = 5 in x 10"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_16: Errore in AppExpr per argomento di tipo incompatibile con il tipo del parametro formale")
+    public void testTC_BASE_16_InvalidApplicationArgumentTypeMismatch() {
+        String errorMsg = "Type error: Expected parameter of type int but got type bool";
+        TypeException e = assertThrows(TypeException.class, () -> parseAndCheck("let f = fun x : int => x + 1 in f true"));
+        assertTrue(e.getMessage().contains(errorMsg));
+    }
 }
