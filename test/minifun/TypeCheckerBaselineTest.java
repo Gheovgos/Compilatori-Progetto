@@ -240,4 +240,26 @@ public class TypeCheckerBaselineTest {
         TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
         assertNotNull(ex.getMessage());
     }
+
+    @Test
+    @DisplayName("TC_BASE_25: Errore di tipo nella chiamata ricorsiva interna di LetFunExpr")
+    public void testTC_BASE_25_InvalidRecursiveCallArgumentInLetFun() {
+        String code = "letfun f : (int -> int) = fun x : int => f true in f 5";
+        TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
+        assertNotNull(ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("TC_BASE_26: IfExpr con rami che restituiscono tipi funzione composti (FunType)")
+    public void testTC_BASE_26_ValidIfReturningFunctionType() {
+        String code = "if true then (fun x : int => x + 1) else (fun y : int => y * 2)";
+        assertEquals(new FunType(new IntType(), new IntType()), parseAndCheck(code));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_27: Errore in BinOpExpr relazionale (==) applicato a due operandi booleani")
+    public void testTC_BASE_27_InvalidEqualityOnBooleans() {
+        TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck("true == false"));
+        assertNotNull(ex.getMessage());
+    }
 }
