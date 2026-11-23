@@ -209,4 +209,35 @@ public class TestCheckerBaselineTest {
         RuntimeException e = assertThrows(RuntimeException.class, () -> typeChecker.check(invalidExpr, typeEnvironment));
         assertTrue(e.getMessage().contains("Node not supported by the TypeChecker"));
     }
+
+    //Casi limite semantici
+    @Test
+    @DisplayName("TC_BASE_21: Funzione di ordine superiore passata come parametro (FunType in ingresso)")
+    public void testTC_BASE_21_ValidHigherOrderFunctionAsParameter() {
+        String code = "let apply = fun f : (int -> int) => (fun x : int => f x) "
+                + "in (apply (fun y : int => y + 1)) 5";
+        assertEquals(new IntType(), parseAndCheck(code));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_22: Tipizzazione contestuale con cattura di variabile da scope esterno")
+    public void testTC_BASE_22_ValidContextualTypingOuterVariable() {
+        String code = "let y = 1 in fun x : int => x + y";
+        assertEquals(new FunType(new IntType(), new IntType()), parseAndCheck(code));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_23: Shadowing lessicale con cambio di tipo in LetExpr e FunExpr")
+    public void testTC_BASE_23_ValidLexicalShadowingWithTypeChange() {
+        assertEquals(new IntType(), parseAndCheck("let x = true in let x = 5 in x + 1"));
+        assertEquals(new IntType(), parseAndCheck("let x = true in (fun x : int => x + 1) 5"));
+    }
+
+    @Test
+    @DisplayName("TC_BASE_24: Isolamento dello scope (variabile di let interno non visibile all'esterno)")
+    public void testTC_BASE_24_InvalidOutOfScopeAfterInnerLet() {
+        String code = "let y = (let x = 5 in x) in x";
+        TypeException ex = assertThrows(TypeException.class, () -> parseAndCheck(code));
+        assertNotNull(ex.getMessage());
+    }
 }
