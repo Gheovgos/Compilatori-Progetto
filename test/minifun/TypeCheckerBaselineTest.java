@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 
-public class TestCheckerBaselineTest {
+public class TypeCheckerBaselineTest {
     private TypeChecker typeChecker;
     private TypeEnvironment typeEnvironment;
 
