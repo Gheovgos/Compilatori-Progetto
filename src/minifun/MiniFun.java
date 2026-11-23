@@ -8,7 +8,19 @@ public class MiniFun {
     interface Node {}
     interface Expr extends Node {}
 
-    public interface Type {}
+    public interface Type { //il monotipo
+        //Calcola l'insieme di variabili di tipo libere nel monotipo
+        default Set<String> freeTypeVars() {
+            if(this instanceof VarType v)
+                return Set.of(v.name);
+            else if (this instanceof FunType f) {
+                Set<String> vars = new HashSet<>(f.left().freeTypeVars());
+                vars.addAll(f.right().freeTypeVars());
+                return Collections.unmodifiableSet(vars);
+            }
+            return Set.of();
+        }
+    }
     public record IntType() implements Type {
         @Override public String toString() {return "int";}
     }
@@ -18,6 +30,122 @@ public class MiniFun {
     public record FunType(Type left, Type right) implements Type {
         @Override public String toString() {return "(" + left + "->" + right + ")";}
     }
+
+    //Variabile di tipo
+    public record VarType(String name) implements Type {
+        public String toString() {return name;}
+    }
+    /*
+        Un politipo è strutturato ad esempio come segue: forall alpha_1 ... alpha_n. tau
+        tau è un monotipo, alpha_n è una variabile vincolata di tipo
+     */
+    public record PolyType(Set<String> quantifiedVars, Type monoType) {
+        public PolyType {
+            quantifiedVars = Collections.unmodifiableSet(new LinkedHashSet<>(quantifiedVars));
+        }
+
+        public static PolyType fromMono (Type monoType) {
+            return new PolyType(Set.of(), monoType);
+        }
+        //metodo per calcolare le variabili di tipo libere
+        public Set<String> freeTypeVars() {
+            Set<String> vars = new HashSet<>(monoType.freeTypeVars());
+            vars.removeAll(quantifiedVars);
+            return Collections.unmodifiableSet(vars);
+        }
+
+        @Override
+        public String toString() {
+            if(quantifiedVars.isEmpty())
+                return monoType.toString();
+            StringBuilder sb = new StringBuilder();
+            for(String v : quantifiedVars) {
+                sb.append("forall ").append(v).append(". ");
+            }
+            sb.append(monoType);
+            return sb.toString();
+        }
+    }
+
+    //Sostituzione: funzione finita da variabili di tipo a monotipi
+    public static final class Substitution {
+        public final Map<String, Type> mappings;
+
+        public Substitution(Map<String, Type> mappings) {
+            this.mappings = Collections.unmodifiableMap(new HashMap<>(mappings));
+        }
+
+        public static Substitution empty() {
+            return new Substitution(Map.of());
+        }
+
+        public static Substitution singleton(String varName, Type type) {
+            return new Substitution(Map.of(varName, type));
+        }
+
+        public Map<String, Type> getMappings() {
+            return mappings;
+        }
+
+        // Applica la sostituzione ad un monotipo: S(tau) dove tau è un monotipo
+        public Type apply(Type type) {
+            if (type instanceof VarType varType)
+                return mappings.getOrDefault(varType.name, varType);
+            else if (type instanceof FunType funType)
+                return new FunType(apply(funType.left()), apply(funType.right()));
+            return type;
+        }
+
+        //Applica la sostituzione a un politipo: S(sigma)
+        //Le variabili quantificate universalmente non vengono sostituite
+        public PolyType apply(PolyType polyType) {
+            if (polyType.quantifiedVars().isEmpty())
+                return PolyType.fromMono(apply(polyType.monoType()));
+            Map<String, Type> restricted = new HashMap<>(this.mappings);
+            for(String bound : polyType.quantifiedVars())
+                restricted.remove(bound);
+            Substitution restrictedSubst = new Substitution(restricted);
+            return new PolyType(polyType.quantifiedVars(), restrictedSubst.apply(polyType.monoType()));
+        }
+
+        //Applica la sostituzione a un intero contesto dei tipi
+        public TypeEnvironment apply(TypeEnvironment gamma) {
+            return gamma.applySubstitution(this);
+        }
+
+        /*
+          Composizione di sostituzioni: this.compose(other) corrisponde a (this o other),
+          ossia applica prima 'other' e poi 'this': (S2 S1)(tau) = S2(S1(tau)).
+         */
+        public Substitution compose(Substitution other) {
+            Map<String, Type> composed = new HashMap<>();
+            for (Map.Entry<String, Type> entry : other.mappings.entrySet()) {
+                composed.put(entry.getKey(), this.apply(entry.getValue()));
+            }
+            for (Map.Entry<String, Type> entry : this.mappings.entrySet()) {
+                composed.putIfAbsent(entry.getKey(), entry.getValue());
+            }
+            return new Substitution(composed);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Substitution that)) return false;
+            return Objects.equals(mappings, that.mappings);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mappings);
+        }
+
+        @Override
+        public String toString() {
+            return mappings.toString();
+        }
+    }
+
 
     // Basic values
     record IntExpr(int value) implements Expr {}
@@ -107,19 +235,32 @@ public class MiniFun {
         public Expr parseExpr() {
             // 1. letfun f x = t in t'
             if (match(TokenType.LETFUN)) {
-                String fName = consume(TokenType.VAR, "Expected function name after 'letfun'").value();
+                String funName = consume(TokenType.VAR, "Expected function name after 'letfun'").value();
+                Type annotatedType = null;
+                String paramName = null;
 
-                //Consume the : and read the function type
-                consume(TokenType.TYPEOF, "Expected ':' after function name " + fName);
-                Type fType = parseType();
+                if (match(TokenType.TYPEOF)) {
+                    // Sintassi classica: letfun f : (int -> int) = fun x : int => t1 in t2
+                    annotatedType = parseType();
+                } else if (current().type() == TokenType.VAR) {
+                    // Sintassi (Algorithm W): letfun f x = t1 in t2
+                    paramName = consume(TokenType.VAR, "Expected parameter name in letfun").value();
+                    if (match(TokenType.TYPEOF)) {
+                        annotatedType = parseType();
+                    }
+                }
 
-                consume(TokenType.EQASSIGN, "Expected '=' after function type");
-                Expr fBody = parseExpr();
-
-                consume(TokenType.IN, "Expected 'in' after function body");
+                consume(TokenType.EQASSIGN, "Expected '=' in letfun declaration");
+                Expr funBody = parseExpr();
+                consume(TokenType.IN, "Expected 'in' in letfun declaration");
                 Expr body = parseExpr();
 
-                return new LetFunExpr(fName, fType, fBody, body);
+                // Desugaring trasparente per l'Evaluator (Type Erasure):
+                // avvolge t1 in un FunExpr mantenendo invariata la struttura di LetFunExpr
+                if (paramName != null) {
+                    funBody = new FunExpr(paramName, null, funBody);
+                }
+                return new LetFunExpr(funName, annotatedType, funBody, body);
             }
             // 2. let x = t in t'
             else if (match(TokenType.LET)) {
@@ -134,14 +275,12 @@ public class MiniFun {
             // 3. fun x => t
             else if (match(TokenType.FUN)) {
                 String param = consume(TokenType.VAR, "Expected parameter name after 'fun'").value();
-
-                // Consume : and read the type
-                consume(TokenType.TYPEOF, "Expected ':' after the parameter " + param);
-                Type paramType = parseType();
-
-                consume(TokenType.ARROW, "Expected row '=>' after the type");
+                Type paramType = null;
+                if (match(TokenType.TYPEOF)) { // Annotazione di tipo opzionale (:)
+                    paramType = parseType();
+                }
+                consume(TokenType.ARROW, "Expected '=>' in function definition");
                 Expr body = parseExpr();
-
                 return new FunExpr(param, paramType, body);
             }
             // 4. if t then t else t

@@ -9,16 +9,26 @@ import minifun.Value.*;
 public class MiniFunMain {
     public static void main(String[] args) {
 
+        /*
         if (args.length < 1) {
             System.err.println("ERROR: You must specify which minifun file to compile!");
             System.exit(1);
         }
         String filePath = args[0];
+
+         */
         System.out.println("STARTING MINIFUN COMPILATION");
 
         try {
-            String code = Files.readString(Path.of(filePath));
-            System.out.println("Execution of MiniFun: " + filePath + " ---\n");
+            //String code = Files.readString(Path.of(filePath));
+            //System.out.println("Execution of MiniFun: " + filePath + " ---\n");
+            String code = "letfun sum : int -> int =" +
+                    "                fun x : int => " +
+                    "                    if x < 1 then 0" +
+                    "                    else x + sum (x - 1)" +
+                    "            in" +
+                    "            let mySum = sum 5 in" +
+                    "            mySum";
             List<Token> tokens = Lexer.tokenize(code);
             Parser parser = new Parser(tokens);
             Expr ast = parser.parseExpr();
