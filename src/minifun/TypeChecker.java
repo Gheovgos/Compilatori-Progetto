@@ -1,11 +1,83 @@
 package minifun;
 import minifun.MiniFun.*;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.*;
+import java.util.Set;
+
 public class TypeChecker {
 
     private boolean isSameType(Type t1, Type t2)
     {
         return t1.equals(t2);
+    }
+    private int freshCounter = 0;
+
+    // Genera una nuova variabile di tipo fresh (t0, t1, ecc)
+    public VarType freshTypeVar()
+    {
+        return new VarType("t" + (freshCounter++));
+    }
+
+    // Sostituisce tutte le variabili legate di pt con variabili fresh
+    // es. inst(forall a, b . a -> b) = t0 -> t1
+    public Type inst(PolyType pt)
+    {
+        if(pt.quantifiedVars().isEmpty()) return pt.monoType();
+
+        Map<String, Type> freshMap = new HashMap<>();
+
+        for(String var : pt.quantifiedVars()) {
+            freshMap.put(var, freshTypeVar());
+        }
+
+        return new Substitution(freshMap).apply(pt.monoType());
+    }
+
+    // Quantifica universalmente su tutte le variabili libere di t che non compaiono libere in gamma:
+    // FTV(t) \ FTV(gamma)
+    public PolyType gener(TypeEnvironment gamma, Type t)
+    {
+        Set<String> freeMonoType = new HashSet<>(t.freeTypeVars());
+
+        freeMonoType.removeAll(gamma.freeTypeVars());
+
+        return new PolyType(freeMonoType, t);
+    }
+
+    private Substitution bindVar(VarType var, Type target) {
+        // Caso in cui si prova a unificare una variabile di tipo con se stessa
+        if (target instanceof VarType otherVar && var.name().equals(otherVar.name())) {
+            return Substitution.empty();
+        }
+        //impedisce tipi ricorsivi infiniti come alpha = int -> alpha
+        if (target.freeTypeVars().contains(var.name())) {
+            throw new TypeException(
+                    "Occurs check failed: recursive infinite type detected unifying '"
+                            + var.name() + "' with '" + target + "'");
+        }
+        return Substitution.singleton(var.name(), target);
+    }
+
+    // Calcola la sostituzione più generale S tale che S(t1) = S(t2)
+    // Se non può, lancia TypeException
+    public Substitution unify(Type t1, Type t2)
+    {
+        if ( (t1 instanceof IntType && t2 instanceof IntType) || (t1 instanceof BoolType && t2 instanceof BoolType)) return Substitution.empty();
+
+        if (t1 instanceof VarType vt1) return bindVar(vt1, t2);
+        if (t2 instanceof VarType vt2) return bindVar(vt2, t1);
+
+        if (t1 instanceof FunType f1 && t2 instanceof FunType f2) {
+            Substitution s1 = unify(f1.left(), f2.left());                          // Check dominio
+            Substitution s2 = unify(s1.apply(f1.right()), s1.apply(f2.right()));
+
+            return s2.compose(s1);
+        }
+
+        throw new TypeException("Cannot unify incompatible types: "+ t1 + " and "+t2);
     }
 
     //The function that translates Γ ⊢ t : τ
